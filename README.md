@@ -4,6 +4,9 @@ https://tools.netsa.cert.org/silk/docs.html
 ## Description
 This package makes it easy to read common silk files without using C Go.
 
+## Go Doc
+https://godoc.org/github.com/chrispassas/silk
+
 ## What is silk
 Source https://tools.netsa.cert.org/silk/faq.html#what-silk 
 >SiLK is a suite of network traffic collection and analysis tools developed and maintained by the CERT Network Situational >Awareness Team (CERT NetSA) at Carnegie Mellon University to facilitate security analysis of large networks. The SiLK tool >suite supports the efficient collection, storage, and analysis of network flow data, enabling network security analysts to >rapidly query large historical traffic data sets.
