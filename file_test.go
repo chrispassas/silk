@@ -190,8 +190,8 @@ type testDetails struct {
 	flows []Flow
 }
 
-//TestFiles
-//Test 56 byte compression 0,1,2,3
+//TestFiles Test all supported file formats. Reads each file and
+//verify first 2 rows all fields match expected test values.
 func TestFiles(t *testing.T) {
 	t.Logf("TestFiles()")
 	var testData = []testDetails{
@@ -283,6 +283,7 @@ func TestFiles(t *testing.T) {
 
 }
 
+//getBenchFileList returns list of all supported test files
 func getBenchFileList() []string {
 	return []string{
 		"testdata/FT_RWIPV6-v1-c0-L.dat",
@@ -321,6 +322,7 @@ func TestOpenNonExistingFile(t *testing.T) {
 	}
 }
 
+//BenchmarkReadFile read all test files to allow benchmarking how fast files can be read.
 func BenchmarkReadFile(b *testing.B) {
 	var err error
 	var sf File
