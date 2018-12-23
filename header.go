@@ -6,7 +6,8 @@ import (
 	"os"
 )
 
-//Header TODO
+//Header is documented here:
+//	https://tools.netsa.cert.org/silk/faq.html#file-header
 type Header struct {
 	MagicNumber   []byte
 	FileFlags     uint8
@@ -23,7 +24,9 @@ type Header struct {
 	fileSensor uint32
 }
 
-//VarLenHeader TODO
+//VarLenHeader is part of the silk header. They contain different things
+//like the cli command used to create the file. For some file types the
+// variable length header also contains the year/month/day/hour of the file.
 type VarLenHeader struct {
 	ID      uint32
 	Length  uint32

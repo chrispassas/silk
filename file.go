@@ -25,6 +25,8 @@ var isTCPAnd = uint32(math.Pow(2, 23))
 
 //Flow represents a silk flow row of data
 //Depending on type of silk record not all fields are used
+//More details on the Flow stuct fields can be found here:
+//	https://tools.netsa.cert.org/silk/faq.html#file-formats
 type Flow struct {
 	startTimeMS56 uint32
 	StartTimeMS   uint64
@@ -48,11 +50,11 @@ type Flow struct {
 	NextHopIP     net.IP
 }
 
-//ErrUnsupportedCompression unknown compression type. Currently supported
-//0 = no compression
-//1 = zlib
-//2 = lzo
-//3 = snappy
+// ErrUnsupportedCompression unknown compression type. Currently supported
+// 	0 = no compression
+// 	1 = zlib
+// 	2 = lzo
+// 	3 = snappy
 var ErrUnsupportedCompression = fmt.Errorf("Unsupported compression")
 
 type offsets struct {
@@ -197,13 +199,13 @@ func getOffsets(recordSize uint16) (o offsets, err error) {
 	return
 }
 
-//File contains header and silk flow records
+//File contains header and silk slice of flow records
 type File struct {
 	Header Header
 	Flows  []Flow
 }
 
-//OpenFile opens silk file returning SilkFile and Error
+//OpenFile opens and parses silk file returning silk File struct and Error
 func OpenFile(filePath string) (sf File, err error) {
 	var f *os.File
 	var n int
