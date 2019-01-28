@@ -37,7 +37,7 @@ package main
 import (
     "fmt"
     "log"
-    "silk"
+    "github.com/chrispassas/silk"
 )
 
 func main() {
