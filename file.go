@@ -285,7 +285,7 @@ func OpenFile(filePath string) (sf File, err error) {
 				recordsCount = n / int(sf.Header.RecordSize)
 			}
 		case 3, 2, 1:
-			if n, err = f.Read(compressedBlockHeader); err == io.EOF {
+			if _, err = f.Read(compressedBlockHeader); err == io.EOF {
 				err = nil
 				return
 			} else if err != nil {

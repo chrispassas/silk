@@ -19,7 +19,7 @@ func getTestDataFTRWIPV6ROUTINGV6V2() testDetails {
 			"testdata/FT_RWIPV6ROUTING-v2-c3-B.dat",
 		},
 		flows: []Flow{
-			Flow{
+			{
 				SrcIP:        net.ParseIP("192.168.40.20"),
 				DstIP:        net.ParseIP("10.0.40.54"),
 				SrcPort:      88,
@@ -40,7 +40,7 @@ func getTestDataFTRWIPV6ROUTINGV6V2() testDetails {
 				Attributes:   0,
 				Application:  0,
 			},
-			Flow{
+			{
 				SrcIP:        net.ParseIP("192.168.20.58"),
 				DstIP:        net.ParseIP("128.63.2.53"),
 				SrcPort:      29070,
@@ -79,7 +79,7 @@ func getTestDataFTRWIPV6V2() testDetails {
 			"testdata/FT_RWIPV6-v2-c3-B.dat",
 		},
 		flows: []Flow{
-			Flow{
+			{
 				SrcIP:        net.ParseIP("192.168.40.20"),
 				DstIP:        net.ParseIP("10.0.40.54"),
 				SrcPort:      88,
@@ -100,7 +100,7 @@ func getTestDataFTRWIPV6V2() testDetails {
 				Attributes:   0,
 				Application:  0,
 			},
-			Flow{
+			{
 				SrcIP:        net.ParseIP("192.168.20.58"),
 				DstIP:        net.ParseIP("128.63.2.53"),
 				SrcPort:      29070,
@@ -139,7 +139,7 @@ func getTestDataFTRWIPV6V1() testDetails {
 			"testdata/FT_RWIPV6-v1-c3-B.dat",
 		},
 		flows: []Flow{
-			Flow{
+			{
 				SrcIP:        net.ParseIP("192.168.40.20"),
 				DstIP:        net.ParseIP("10.0.40.54"),
 				SrcPort:      88,
@@ -160,7 +160,7 @@ func getTestDataFTRWIPV6V1() testDetails {
 				Attributes:   0,
 				Application:  0,
 			},
-			Flow{
+			{
 				SrcIP:        net.ParseIP("192.168.20.58"),
 				DstIP:        net.ParseIP("128.63.2.53"),
 				SrcPort:      29070,

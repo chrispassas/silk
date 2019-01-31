@@ -94,7 +94,7 @@ func parseHeader(f *os.File) (h Header, err error) {
 
 		if varLengthHeaderLength > 0 {
 			varHeaderContent = make([]byte, varLengthHeaderLength-8)
-			if n, err = f.Read(varHeaderContent); err != nil {
+			if _, err = f.Read(varHeaderContent); err != nil {
 				return
 			}
 		}
