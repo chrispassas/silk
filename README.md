@@ -1,6 +1,6 @@
 [![GoDoc](https://godoc.org/github.com/chrispassas/silk?status.svg)](https://godoc.org/github.com/chrispassas/silk)
 [![Go Report Card](https://goreportcard.com/badge/github.com/chrispassas/silk)](https://goreportcard.com/report/github.com/chrispassas/silk)
-[![cover.run](https://cover.run/go/github.com/chrispassas/silk.svg?style=flat&tag=golang-1.10)](https://cover.run/go?tag=golang-1.10&repo=github.com%2Fchrispassas%2Fsilk)
+
 
 # silk flows
 https://tools.netsa.cert.org/silk/docs.html
