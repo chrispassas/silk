@@ -1,11 +1,13 @@
 package silk
 
 import (
+	"bufio"
 	"bytes"
 	"compress/zlib"
 	"encoding/binary"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"math"
 	"net"
 	"os"
@@ -56,6 +58,7 @@ type Flow struct {
 // 	2 = lzo
 // 	3 = snappy
 var ErrUnsupportedCompression = fmt.Errorf("Unsupported compression")
+var ErrUnsupportedPartialRead = fmt.Errorf("Reader failed to read expected length")
 
 type offsets struct {
 	startStartTime    int
@@ -205,16 +208,18 @@ type File struct {
 	Flows  []Flow
 }
 
-//OpenFile opens and parses silk file returning silk File struct and Error
-func OpenFile(filePath string) (sf File, err error) {
-	var f *os.File
+func ParseReader(r io.Reader) (sf File, err error) {
+
+	return parseReader(r)
+}
+
+func parseReader(f io.Reader) (sf File, err error) {
 	var n int
 	var x int
 	var start int
 	var end int
 	var readMod float64
 	var shortReadCount = 0
-	var ret int64
 	var maxShortReadCount = 5
 	var recordsCount int
 	var silkFlow Flow
@@ -226,10 +231,6 @@ func OpenFile(filePath string) (sf File, err error) {
 	var o offsets
 	var ro io.ReadCloser
 	var isTCP uint32
-
-	if f, err = os.Open(filePath); err != nil {
-		return
-	}
 
 	if sf.Header, err = parseHeader(f); err != nil {
 		return
@@ -244,10 +245,6 @@ func OpenFile(filePath string) (sf File, err error) {
 		readSize := (int(mod) * int(sf.Header.RecordSize))
 		decompressedBuffer = make([]byte, readSize)
 	}
-
-	//TODO ADD flock syscall
-	// syscall.Flock(f.Fd(), 1)
-	// defer flock unlock
 
 	var blockCount int
 	for {
@@ -277,12 +274,8 @@ func OpenFile(filePath string) (sf File, err error) {
 			recordsCount = n / int(sf.Header.RecordSize)
 
 			if readMod = math.Mod(float64(n), float64(sf.Header.RecordSize)); readMod != 0 {
-				if ret, err = f.Seek(-int64(readMod), 1); err != nil {
-					err = fmt.Errorf("Seek ret:%d error:%s", ret, err)
-					return
-				}
-
-				recordsCount = n / int(sf.Header.RecordSize)
+				err = ErrUnsupportedPartialRead
+				return
 			}
 		case 3, 2, 1:
 			if _, err = f.Read(compressedBlockHeader); err == io.EOF {
@@ -461,5 +454,23 @@ func OpenFile(filePath string) (sf File, err error) {
 			end += int(sf.Header.RecordSize)
 		}
 	}
+	return
+}
+
+//OpenFile opens and parses silk file returning silk File struct and Error
+func OpenFile(filePath string) (sf File, err error) {
+	var f *os.File
+
+	if f, err = os.Open(filePath); err != nil {
+		return
+	}
+	var r = bufio.NewReader(f)
+	var data []byte
+	if data, err = ioutil.ReadAll(r); err != nil {
+		return
+	}
+	var r2 = bytes.NewReader(data)
+
+	return parseReader(r2)
 
 }

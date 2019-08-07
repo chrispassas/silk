@@ -3,7 +3,7 @@ package silk
 import (
 	"encoding/binary"
 	"fmt"
-	"os"
+	"io"
 )
 
 //Header is documented here:
@@ -33,7 +33,7 @@ type VarLenHeader struct {
 	Content []byte
 }
 
-func parseHeader(f *os.File) (h Header, err error) {
+func parseHeader(f io.Reader) (h Header, err error) {
 	var n int
 	var headerBytes = make([]byte, 16)
 	var id, varLengthHeaderLength uint32
@@ -134,9 +134,14 @@ func parseHeader(f *os.File) (h Header, err error) {
 	h.HeaderLength = counter
 	var headerPaddingLength = int64(headerPadding - counter)
 	if headerPaddingLength != 0 {
-		if _, err = f.Seek(headerPaddingLength, 1); err != nil {
+		var readPaddingBytes = make([]byte, headerPaddingLength)
+		// fmt.Printf("headerPaddingLength:%d readPaddingBytes:%d\n", headerPaddingLength, len(readPaddingBytes))
+		if _, err = f.Read(readPaddingBytes); err != nil {
 			return
 		}
+		// if _, err = f.Seek(headerPaddingLength, 1); err != nil {
+		// 	return
+		// }
 	}
 
 	return
