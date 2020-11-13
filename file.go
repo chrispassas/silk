@@ -490,20 +490,8 @@ func OpenFile(filePath string) (sf File, err error) {
 	return parsedFlows.File, nil
 }
 
-func Parse(filePath string, receiver FlowReceiver) (err error) {
-	var f *os.File
-
-	if f, err = os.Open(filePath); err != nil {
-		return
-	}
-	var r = bufio.NewReader(f)
-	var data []byte
-	if data, err = ioutil.ReadAll(r); err != nil {
-		return
-	}
-	var r2 = bytes.NewReader(data)
-
-	err = parseReader(r2, receiver)
+func Parse(reader io.Reader, receiver FlowReceiver) (err error) {
+	err = parseReader(reader, receiver)
 	if err != nil {
 		return err
 	}

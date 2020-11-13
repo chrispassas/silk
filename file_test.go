@@ -2,6 +2,7 @@ package silk
 
 import (
 	"net"
+	"os"
 	"testing"
 )
 
@@ -296,8 +297,14 @@ func TestParse(t *testing.T) {
 			var err error
 			receiver := NewChannelFlowReceiver(0)
 			flows := make([]Flow, 0, 245340)
+			reader, err := os.Open(filePath)
+			if err != nil {
+				t.Error(err)
+				continue
+			}
+
 			go func() {
-				if err = Parse(filePath, receiver); err != nil {
+				if err = Parse(reader, receiver); err != nil {
 					t.Errorf("OpenFile file:%s error:%s", filePath, err)
 				}
 			}()
