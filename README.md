@@ -110,6 +110,11 @@ func main() {
     }()
 
     for flow := range receiver.Read() {
+        /*
+            Pulling all data into an in memory array. That really isn't the point of the channel based
+            parser. You would want to stream it somewhere else to keep memory usage low. This is for example
+            purposes only.
+        */
         flows = append(flows, flow)
     }
 
