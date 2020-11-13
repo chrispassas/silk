@@ -313,6 +313,10 @@ func TestParse(t *testing.T) {
 				flows = append(flows, flow)
 			}
 
+			if err = reader.Close(); err != nil {
+				t.Error("unable to close reader")
+			}
+
 			if len(flows) != 245340 {
 				t.Errorf("File:%s Rows found:%d, rows expected:%d", filePath, len(flows), 245340)
 			}
