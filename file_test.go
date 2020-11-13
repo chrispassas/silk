@@ -2,6 +2,7 @@ package silk
 
 import (
 	"net"
+	"os"
 	"testing"
 )
 
@@ -276,6 +277,115 @@ func TestFiles(t *testing.T) {
 				}
 				if sf.Flows[x].Application != testFlowData.flows[x].Application {
 					t.Errorf("Test Application:%d not equal to data row:%d file:%s", testFlowData.flows[x].Application, sf.Flows[x].Application, filePath)
+				}
+			}
+		}
+	}
+
+}
+
+//TestParse Test all supported file formats using an alternative flow receiver
+func TestParse(t *testing.T) {
+	t.Logf("TestFiles()")
+	var testData = []testDetails{
+		getTestDataFTRWIPV6V2(),          //56 byte
+		getTestDataFTRWIPV6V1(),          //68 byte
+		getTestDataFTRWIPV6ROUTINGV6V2(), //88 byte
+	}
+	for _, testFlowData := range testData {
+		for _, filePath := range testFlowData.files {
+			var err error
+			receiver := NewChannelFlowReceiver(0)
+			flows := make([]Flow, 0, 245340)
+			reader, err := os.Open(filePath)
+			if err != nil {
+				t.Error(err)
+				continue
+			}
+
+			go func() {
+				if err = Parse(reader, receiver); err != nil {
+					t.Errorf("OpenFile file:%s error:%s", filePath, err)
+				}
+			}()
+
+			for flow := range receiver.Read() {
+				flows = append(flows, flow)
+			}
+
+			if err = reader.Close(); err != nil {
+				t.Error("unable to close reader")
+			}
+
+			if len(flows) != 245340 {
+				t.Errorf("File:%s Rows found:%d, rows expected:%d", filePath, len(flows), 245340)
+			}
+			if len(flows) < len(testFlowData.flows) {
+				t.Errorf("Test file:%s has fewer rows:%d then test:%d", filePath, len(flows), len(testFlowData.flows))
+			}
+
+			for x := 0; x < len(testFlowData.flows); x++ {
+
+				if len(flows) <= x {
+					break
+				}
+
+				if flows[x].SrcPort != testFlowData.flows[x].SrcPort {
+					t.Errorf("Test SrcPort:%d not equal to data row:%d file:%s", testFlowData.flows[x].SrcPort, flows[x].SrcPort, filePath)
+				}
+				if flows[x].DstPort != testFlowData.flows[x].DstPort {
+					t.Errorf("Test DstPort:%d not equal to data row:%d file:%s", testFlowData.flows[x].DstPort, flows[x].DstPort, filePath)
+				}
+				if flows[x].SrcIP.String() != testFlowData.flows[x].SrcIP.String() {
+					t.Errorf("Test SrcIP:%s not equal to data row:%s file:%s", testFlowData.flows[x].SrcIP.String(), flows[x].SrcIP.String(), filePath)
+				}
+				if flows[x].DstIP.String() != testFlowData.flows[x].DstIP.String() {
+					t.Errorf("Test DstIP:%s not equal to data row:%s file:%s", testFlowData.flows[x].DstIP.String(), flows[x].DstIP.String(), filePath)
+				}
+				if flows[x].Proto != testFlowData.flows[x].Proto {
+					t.Errorf("Test Proto:%d not equal to data row:%d file:%s", testFlowData.flows[x].Proto, flows[x].Proto, filePath)
+				}
+				if flows[x].Packets != testFlowData.flows[x].Packets {
+					t.Errorf("Test Packets:%d not equal to data row:%d file:%s", testFlowData.flows[x].Packets, flows[x].Packets, filePath)
+				}
+				if flows[x].Bytes != testFlowData.flows[x].Bytes {
+					t.Errorf("Test Bytes:%d not equal to data row:%d file:%s", testFlowData.flows[x].Bytes, flows[x].Bytes, filePath)
+				}
+				if flows[x].Flags != testFlowData.flows[x].Flags {
+					t.Errorf("Test Flags:%d not equal to data row:%d file:%s", testFlowData.flows[x].Flags, flows[x].Flags, filePath)
+				}
+				if flows[x].StartTimeMS != testFlowData.flows[x].StartTimeMS {
+					t.Errorf("Test StartTimeMS:%d not equal to data row:%d file:%s", testFlowData.flows[x].StartTimeMS, flows[x].StartTimeMS, filePath)
+				}
+				if flows[x].Sensor != testFlowData.flows[x].Sensor {
+					t.Errorf("Test Sensor:%d not equal to data row:%d file:%s", testFlowData.flows[x].Sensor, flows[x].Sensor, filePath)
+				}
+				if flows[x].Duration != testFlowData.flows[x].Duration {
+					t.Errorf("Test Duration:%d not equal to data row:%d file:%s", testFlowData.flows[x].Duration, flows[x].Duration, filePath)
+				}
+				if flows[x].SNMPIn != testFlowData.flows[x].SNMPIn {
+					t.Errorf("Test SNMPIn:%d not equal to data row:%d file:%s", testFlowData.flows[x].SNMPIn, flows[x].SNMPIn, filePath)
+				}
+				if flows[x].SNMPOut != testFlowData.flows[x].SNMPOut {
+					t.Errorf("Test SNMPOut:%d not equal to data row:%d file:%s", testFlowData.flows[x].SNMPOut, flows[x].SNMPOut, filePath)
+				}
+				if flows[x].NextHopIP.Equal(testFlowData.flows[x].NextHopIP) == false {
+					t.Errorf("Test NextHopIP:%s not equal to data row:%s file:%s", testFlowData.flows[x].NextHopIP.String(), flows[x].NextHopIP.String(), filePath)
+				}
+				if flows[x].ClassType != testFlowData.flows[x].ClassType {
+					t.Errorf("Test ClassType:%d not equal to data row:%d file:%s", testFlowData.flows[x].ClassType, flows[x].ClassType, filePath)
+				}
+				if flows[x].InitalFlags != testFlowData.flows[x].InitalFlags {
+					t.Errorf("Test InitalFlags:%d not equal to data row:%d file:%s", testFlowData.flows[x].InitalFlags, flows[x].InitalFlags, filePath)
+				}
+				if flows[x].SessionFlags != testFlowData.flows[x].SessionFlags {
+					t.Errorf("Test SessionFlags:%d not equal to data row:%d file:%s", testFlowData.flows[x].SessionFlags, flows[x].SessionFlags, filePath)
+				}
+				if flows[x].Attributes != testFlowData.flows[x].Attributes {
+					t.Errorf("Test Attributes:%d not equal to data row:%d file:%s", testFlowData.flows[x].Attributes, flows[x].Attributes, filePath)
+				}
+				if flows[x].Application != testFlowData.flows[x].Application {
+					t.Errorf("Test Application:%d not equal to data row:%d file:%s", testFlowData.flows[x].Application, flows[x].Application, filePath)
 				}
 			}
 		}

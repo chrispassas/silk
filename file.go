@@ -208,12 +208,19 @@ type File struct {
 	Flows  []Flow
 }
 
-func ParseReader(r io.Reader) (sf File, err error) {
+func ParseReader(r io.Reader, receiver FlowReceiver) (sf File, err error) {
+	parsedFlows := NewSliceFlowReceiver(4096)
+	err = parseReader(r, parsedFlows)
+	if err != nil {
+		return File{}, err
+	}
 
-	return parseReader(r)
+	return parsedFlows.File, nil
 }
 
-func parseReader(f io.Reader) (sf File, err error) {
+func parseReader(f io.Reader, receiver FlowReceiver) (err error) {
+	defer receiver.Close()
+
 	var n int
 	var x int
 	var start int
@@ -231,18 +238,21 @@ func parseReader(f io.Reader) (sf File, err error) {
 	var o offsets
 	var ro io.ReadCloser
 	var isTCP uint32
+	var header Header
 
-	if sf.Header, err = parseHeader(f); err != nil {
+	if header, err = parseHeader(f); err != nil {
 		return
 	}
 
-	if o, err = getOffsets(sf.Header.RecordSize); err != nil {
+	receiver.HandleHeader(header)
+
+	if o, err = getOffsets(header.RecordSize); err != nil {
 		return
 	}
 
-	if sf.Header.Compression == 0 {
-		mod := math.Floor(float64(defaultReadSize) / float64(sf.Header.RecordSize))
-		readSize := (int(mod) * int(sf.Header.RecordSize))
+	if header.Compression == 0 {
+		mod := math.Floor(float64(defaultReadSize) / float64(header.RecordSize))
+		readSize := (int(mod) * int(header.RecordSize))
 		decompressedBuffer = make([]byte, readSize)
 	}
 
@@ -250,7 +260,7 @@ func parseReader(f io.Reader) (sf File, err error) {
 	for {
 		blockCount++
 		// log.Printf("blockCount:%d", blockCount)
-		switch sf.Header.Compression {
+		switch header.Compression {
 		case 0:
 			if n, err = f.Read(decompressedBuffer); n == 0 && err == io.EOF {
 				err = nil
@@ -258,8 +268,8 @@ func parseReader(f io.Reader) (sf File, err error) {
 			} else if err != nil {
 				err = fmt.Errorf("Read error:%s", err.Error())
 				return
-			} else if n < int(sf.Header.RecordSize) {
-				err = fmt.Errorf("Read:%d smaller then record size:%d", n, sf.Header.RecordSize)
+			} else if n < int(header.RecordSize) {
+				err = fmt.Errorf("Read:%d smaller then record size:%d", n, header.RecordSize)
 				return
 			} else if n < len(decompressedBuffer) {
 				shortReadCount++
@@ -271,9 +281,9 @@ func parseReader(f io.Reader) (sf File, err error) {
 				shortReadCount = 0
 			}
 
-			recordsCount = n / int(sf.Header.RecordSize)
+			recordsCount = n / int(header.RecordSize)
 
-			if readMod = math.Mod(float64(n), float64(sf.Header.RecordSize)); readMod != 0 {
+			if readMod = math.Mod(float64(n), float64(header.RecordSize)); readMod != 0 {
 				err = ErrUnsupportedPartialRead
 				return
 			}
@@ -300,15 +310,15 @@ func parseReader(f io.Reader) (sf File, err error) {
 			} else if err != nil {
 				return
 			}
-			if sf.Header.Compression == 3 {
+			if header.Compression == 3 {
 				if _, err = snappy.Decode(decompressedBuffer, compressedBuffer[:compressedBlockSize]); err != nil {
 					return
 				}
-			} else if sf.Header.Compression == 2 {
+			} else if header.Compression == 2 {
 				if decompressedBuffer, err = lzo.Decompress1X(bytes.NewReader(compressedBuffer[:compressedBlockSize]), 0, 0); err != nil {
 					return
 				}
-			} else if sf.Header.Compression == 1 {
+			} else if header.Compression == 1 {
 				if ro, err = zlib.NewReader(bytes.NewReader(compressedBuffer[:compressedBlockSize])); err != nil {
 					return
 				}
@@ -319,14 +329,14 @@ func parseReader(f io.Reader) (sf File, err error) {
 				ro.Close()
 			}
 
-			recordsCount = int(decompressedBlockSize) / int(sf.Header.RecordSize)
+			recordsCount = int(decompressedBlockSize) / int(header.RecordSize)
 		default:
 			err = ErrUnsupportedCompression
 			return
 		}
 
 		start = 0
-		end = int(sf.Header.RecordSize)
+		end = int(header.RecordSize)
 		for x = 0; x < recordsCount; x++ {
 			//Clear out struct values
 			silkFlow.startTimeMS56 = 0
@@ -350,11 +360,11 @@ func parseReader(f io.Reader) (sf File, err error) {
 			silkFlow.SNMPOut = 0
 			silkFlow.NextHopIP = nil
 
-			if sf.Header.FileFlags == 0 {
+			if header.FileFlags == 0 {
 				//little endian
-				if sf.Header.RecordSize == 56 {
+				if header.RecordSize == 56 {
 					silkFlow.startTimeMS56 = binary.LittleEndian.Uint32(decompressedBuffer[start:end][o.startStartTime:o.endStartTime])
-					silkFlow.StartTimeMS = uint64((calMsec & silkFlow.startTimeMS56)) + sf.Header.fileDateMS
+					silkFlow.StartTimeMS = uint64((calMsec & silkFlow.startTimeMS56)) + header.fileDateMS
 					isTCP = silkFlow.startTimeMS56 & isTCPAnd
 					if isTCP != 0 {
 						silkFlow.Proto = 6
@@ -381,7 +391,7 @@ func parseReader(f io.Reader) (sf File, err error) {
 				silkFlow.Bytes = binary.LittleEndian.Uint32(decompressedBuffer[start:end][o.startBytes:o.endBytes])
 				silkFlow.Duration = binary.LittleEndian.Uint32(decompressedBuffer[start:end][o.startDuration:o.endDuration])
 
-				if sf.Header.RecordSize == 88 {
+				if header.RecordSize == 88 {
 					silkFlow.SNMPIn = binary.LittleEndian.Uint16(decompressedBuffer[start:end][o.startSNMPIn:o.endSNMPIn])
 					silkFlow.SNMPOut = binary.LittleEndian.Uint16(decompressedBuffer[start:end][o.startSNMPOut:o.endSNMPOut])
 					silkFlow.NextHopIP = net.ParseIP(net.IP(decompressedBuffer[start:end][o.startNextHopIP:o.endNextHopIP]).String())
@@ -389,21 +399,21 @@ func parseReader(f io.Reader) (sf File, err error) {
 					silkFlow.Application = binary.LittleEndian.Uint16(decompressedBuffer[start:end][o.startApplication:o.endApplication])
 				}
 
-				if sf.Header.RecordSize == 88 || sf.Header.RecordSize == 68 {
+				if header.RecordSize == 88 || header.RecordSize == 68 {
 					silkFlow.ClassType = decompressedBuffer[o.startClassType]
 					silkFlow.Sensor = binary.LittleEndian.Uint16(decompressedBuffer[start:end][o.startSensor:o.endSensor])
 					silkFlow.InitalFlags = decompressedBuffer[o.startInitalFlags]
 					silkFlow.SessionFlags = decompressedBuffer[o.startSessionFlags]
 					silkFlow.Attributes = decompressedBuffer[o.startAttributes]
-				} else if sf.Header.RecordSize == 56 {
-					silkFlow.Sensor = uint16(sf.Header.fileSensor)
+				} else if header.RecordSize == 56 {
+					silkFlow.Sensor = uint16(header.fileSensor)
 				}
 
 			} else {
 				//big endian)
-				if sf.Header.RecordSize == 56 {
+				if header.RecordSize == 56 {
 					silkFlow.startTimeMS56 = binary.BigEndian.Uint32(decompressedBuffer[start:end][o.startStartTime:o.endStartTime])
-					silkFlow.StartTimeMS = uint64((calMsec & silkFlow.startTimeMS56)) + sf.Header.fileDateMS
+					silkFlow.StartTimeMS = uint64((calMsec & silkFlow.startTimeMS56)) + header.fileDateMS
 					isTCP = silkFlow.startTimeMS56 & isTCPAnd
 					if isTCP != 0 {
 						silkFlow.Proto = 6
@@ -429,7 +439,7 @@ func parseReader(f io.Reader) (sf File, err error) {
 				silkFlow.Bytes = binary.BigEndian.Uint32(decompressedBuffer[start:end][o.startBytes:o.endBytes])
 				silkFlow.Duration = binary.BigEndian.Uint32(decompressedBuffer[start:end][o.startDuration:o.endDuration])
 
-				if sf.Header.RecordSize == 88 {
+				if header.RecordSize == 88 {
 					silkFlow.SNMPIn = binary.BigEndian.Uint16(decompressedBuffer[start:end][o.startSNMPIn:o.endSNMPIn])
 					silkFlow.SNMPOut = binary.BigEndian.Uint16(decompressedBuffer[start:end][o.startSNMPOut:o.endSNMPOut])
 					copy(silkFlow.NextHopIP, decompressedBuffer[start:end][o.startNextHopIP:o.endNextHopIP])
@@ -438,20 +448,20 @@ func parseReader(f io.Reader) (sf File, err error) {
 					silkFlow.Application = binary.BigEndian.Uint16(decompressedBuffer[start:end][o.startApplication:o.endApplication])
 				}
 
-				if sf.Header.RecordSize == 88 || sf.Header.RecordSize == 68 {
+				if header.RecordSize == 88 || header.RecordSize == 68 {
 					silkFlow.Sensor = binary.BigEndian.Uint16(decompressedBuffer[start:end][o.startSensor:o.endSensor])
 					silkFlow.InitalFlags = decompressedBuffer[o.startInitalFlags]
 					silkFlow.SessionFlags = decompressedBuffer[o.startSessionFlags]
 					silkFlow.Attributes = decompressedBuffer[o.startAttributes]
 					silkFlow.ClassType = decompressedBuffer[o.startClassType]
-				} else if sf.Header.RecordSize == 56 {
-					silkFlow.Sensor = uint16(sf.Header.fileSensor)
+				} else if header.RecordSize == 56 {
+					silkFlow.Sensor = uint16(header.fileSensor)
 				}
 			}
 
-			sf.Flows = append(sf.Flows, silkFlow)
-			start += int(sf.Header.RecordSize)
-			end += int(sf.Header.RecordSize)
+			receiver.HandleFlow(silkFlow)
+			start += int(header.RecordSize)
+			end += int(header.RecordSize)
 		}
 	}
 	return
@@ -471,6 +481,20 @@ func OpenFile(filePath string) (sf File, err error) {
 	}
 	var r2 = bytes.NewReader(data)
 
-	return parseReader(r2)
+	parsedFlows := NewSliceFlowReceiver(4096)
+	err = parseReader(r2, parsedFlows)
+	if err != nil {
+		return File{}, err
+	}
 
+	return parsedFlows.File, nil
+}
+
+func Parse(reader io.Reader, receiver FlowReceiver) (err error) {
+	err = parseReader(reader, receiver)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
