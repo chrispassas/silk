@@ -1,4 +1,4 @@
-module github.com/twakeman-giti/silk
+module github.com/chrispassas/silk
 
 go 1.14
 
