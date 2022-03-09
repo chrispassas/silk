@@ -66,7 +66,7 @@ func getTestDataFTRWIPV6ROUTINGV6V2() testDetails {
 	}
 }
 
-//getTestDataFTRWIPV6V2 68 byte records
+//getTestDataFTRWIPV6V2 56 byte records
 func getTestDataFTRWIPV6V2() testDetails {
 	return testDetails{
 		files: []string{
@@ -186,6 +186,63 @@ func getTestDataFTRWIPV6V1() testDetails {
 	}
 }
 
+//getTestDataFTRWGENERICV5 52 byte records
+func getTestDataFTRWGENERICV5() testDetails {
+	return testDetails{
+		files: []string{
+			"testdata/FT_RWGENERIC-v5-c0-B.dat",
+			"testdata/FT_RWGENERIC-v5-c0-L.dat",
+			"testdata/FT_RWGENERIC-v5-c1-B.dat",
+			"testdata/FT_RWGENERIC-v5-c1-L.dat",
+		},
+
+		flows: []Flow{
+			{
+				SrcIP:        net.ParseIP("192.168.40.20"),
+				DstIP:        net.ParseIP("10.0.40.54"),
+				SrcPort:      88,
+				DstPort:      60339,
+				Proto:        6,
+				Packets:      4,
+				Bytes:        373,
+				Flags:        30,
+				StartTimeMS:  1434553200013,
+				Duration:     6,
+				Sensor:       3,
+				SNMPIn:       0,
+				SNMPOut:      0,
+				NextHopIP:    net.ParseIP("0.0.0.0"),
+				ClassType:    1,
+				InitalFlags:  0,
+				SessionFlags: 0,
+				Attributes:   0,
+				Application:  0,
+			},
+			{
+				SrcIP:        net.ParseIP("192.168.20.58"),
+				DstIP:        net.ParseIP("128.63.2.53"),
+				SrcPort:      29070,
+				DstPort:      53,
+				Proto:        17,
+				Packets:      1,
+				Bytes:        74,
+				Flags:        0,
+				StartTimeMS:  1434553200025,
+				Duration:     0,
+				Sensor:       3,
+				SNMPIn:       0,
+				SNMPOut:      0,
+				NextHopIP:    net.ParseIP("0.0.0.0"),
+				ClassType:    1,
+				InitalFlags:  0,
+				SessionFlags: 0,
+				Attributes:   0,
+				Application:  0,
+			},
+		},
+	}
+}
+
 type testDetails struct {
 	files []string
 	flows []Flow
@@ -199,6 +256,7 @@ func TestFiles(t *testing.T) {
 		getTestDataFTRWIPV6V2(),          //56 byte
 		getTestDataFTRWIPV6V1(),          //68 byte
 		getTestDataFTRWIPV6ROUTINGV6V2(), //88 byte
+		getTestDataFTRWGENERICV5(),       //52 byte
 	}
 	for _, testFlowData := range testData {
 		for _, filePath := range testFlowData.files {
@@ -291,6 +349,7 @@ func TestParse(t *testing.T) {
 		getTestDataFTRWIPV6V2(),          //56 byte
 		getTestDataFTRWIPV6V1(),          //68 byte
 		getTestDataFTRWIPV6ROUTINGV6V2(), //88 byte
+		getTestDataFTRWGENERICV5(),       //52 byte
 	}
 	for _, testFlowData := range testData {
 		for _, filePath := range testFlowData.files {
@@ -420,6 +479,10 @@ func getBenchFileList() []string {
 		"testdata/FT_RWIPV6ROUTING-v2-c2-B.dat",
 		"testdata/FT_RWIPV6ROUTING-v2-c3-L.dat",
 		"testdata/FT_RWIPV6ROUTING-v2-c3-B.dat",
+		"testdata/FT_RWGENERIC-v5-c0-B.dat",
+		"testdata/FT_RWGENERIC-v5-c0-L.dat",
+		"testdata/FT_RWGENERIC-v5-c1-B.dat",
+		"testdata/FT_RWGENERIC-v5-c1-L.dat",
 	}
 }
 

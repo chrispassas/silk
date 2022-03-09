@@ -30,10 +30,10 @@ Source https://tools.netsa.cert.org/silk/faq.html#what-silk
 | 56            | RWIPV6 VERSION 2         | Zlib (1)      | :white_check_mark: |
 | 56            | RWIPV6 VERSION 2         | Lzo (2)       | :white_check_mark: |
 | 56            | RWIPV6 VERSION 2         | Snappy (3)    | :white_check_mark: |
-| 52            | RWGENERIC VERSION 16     | None (0)      | :white_check_mark: |
-| 52            | RWGENERIC VERSION 16     | Zlib (1)      | :white_check_mark: |
-| 52            | RWGENERIC VERSION 16     | Lzo (2)       | :white_check_mark: |
-| 52            | RWGENERIC VERSION 16     | Snappy (3)    | :white_check_mark: |
+| 52            | RWGENERIC VERSION 5      | None (0)      | :white_check_mark: |
+| 52            | RWGENERIC VERSION 5      | Zlib (1)      | :white_check_mark: |
+| 52            | RWGENERIC VERSION 5      | Lzo (2)       | :white_check_mark: |
+| 52            | RWGENERIC VERSION 5      | Snappy (3)    | :white_check_mark: |
 
 ## Example
 

@@ -415,19 +415,28 @@ func parseReader(f io.Reader, receiver FlowReceiver) (err error) {
 					silkFlow.Proto = uint8(decompressedBuffer[start:end][o.startProto])
 					silkFlow.StartTimeMS = binary.LittleEndian.Uint64(decompressedBuffer[start:end][o.startStartTime:o.endStartTime])
 				}
+				if header.RecordSize == 52 {
+					silkFlow.SrcIP = net.ParseIP(intToIP(binary.BigEndian.Uint32(decompressedBuffer[start:end][o.startSrcIP:o.endSrcIP])))
+					silkFlow.DstIP = net.ParseIP(intToIP(binary.BigEndian.Uint32(decompressedBuffer[start:end][o.startDstIP:o.endDstIP])))
+				} else {
+					silkFlow.SrcIP = net.ParseIP(net.IP(decompressedBuffer[start:end][o.startSrcIP:o.endSrcIP]).String())
+					silkFlow.DstIP = net.ParseIP(net.IP(decompressedBuffer[start:end][o.startDstIP:o.endDstIP]).String())
+				}
 
-				silkFlow.SrcIP = net.ParseIP(net.IP(decompressedBuffer[start:end][o.startSrcIP:o.endSrcIP]).String())
-				silkFlow.DstIP = net.ParseIP(net.IP(decompressedBuffer[start:end][o.startDstIP:o.endDstIP]).String())
 				silkFlow.SrcPort = binary.LittleEndian.Uint16(decompressedBuffer[start:end][o.startSrcPort:o.endSrcPort])
 				silkFlow.DstPort = binary.LittleEndian.Uint16(decompressedBuffer[start:end][o.startDstPort:o.endDstPort])
 				silkFlow.Packets = binary.LittleEndian.Uint32(decompressedBuffer[start:end][o.startPackets:o.endPackets])
 				silkFlow.Bytes = binary.LittleEndian.Uint32(decompressedBuffer[start:end][o.startBytes:o.endBytes])
 				silkFlow.Duration = binary.LittleEndian.Uint32(decompressedBuffer[start:end][o.startDuration:o.endDuration])
 
-				if header.RecordSize == 88 || header.RecordSize == 52 {
+				if header.RecordSize == 88 {
 					silkFlow.SNMPIn = binary.LittleEndian.Uint16(decompressedBuffer[start:end][o.startSNMPIn:o.endSNMPIn])
 					silkFlow.SNMPOut = binary.LittleEndian.Uint16(decompressedBuffer[start:end][o.startSNMPOut:o.endSNMPOut])
 					silkFlow.NextHopIP = net.ParseIP(net.IP(decompressedBuffer[start:end][o.startNextHopIP:o.endNextHopIP]).String())
+				} else if header.RecordSize == 52 {
+					silkFlow.SNMPIn = binary.LittleEndian.Uint16(decompressedBuffer[start:end][o.startSNMPIn:o.endSNMPIn])
+					silkFlow.SNMPOut = binary.LittleEndian.Uint16(decompressedBuffer[start:end][o.startSNMPOut:o.endSNMPOut])
+					silkFlow.NextHopIP = net.ParseIP(intToIP(binary.BigEndian.Uint32(decompressedBuffer[start:end][o.startNextHopIP:o.endNextHopIP])))
 				} else {
 					silkFlow.Application = binary.LittleEndian.Uint16(decompressedBuffer[start:end][o.startApplication:o.endApplication])
 				}
@@ -498,6 +507,15 @@ func parseReader(f io.Reader, receiver FlowReceiver) (err error) {
 		}
 	}
 	return
+}
+
+func intToIP(ip uint32) string {
+	result := make(net.IP, 4)
+	result[0] = byte(ip)
+	result[1] = byte(ip >> 8)
+	result[2] = byte(ip >> 16)
+	result[3] = byte(ip >> 24)
+	return result.String()
 }
 
 //OpenFile opens and parses silk file returning silk File struct and Error
