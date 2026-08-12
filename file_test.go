@@ -1,6 +1,8 @@
 package silk
 
 import (
+	"bytes"
+	"encoding/binary"
 	"net"
 	"os"
 	"testing"
@@ -340,6 +342,90 @@ func TestFiles(t *testing.T) {
 		}
 	}
 
+}
+
+//TestParseRecordOffsetsAreRecordRelative is a regression test for a bug where the
+//ClassType, InitalFlags, SessionFlags and Attributes fields were read using offsets
+//relative to the start of the read buffer instead of offsets relative to the current
+//record's start. Every record after the first in a block silently inherited record 0's
+//values for those fields. This builds a minimal, synthetic (uncompressed, 52-byte
+//record) silk file with two records whose values differ, so the bug can't hide behind
+//coincidentally-equal fixture data the way it did in TestFiles/TestParse.
+func TestParseRecordOffsetsAreRecordRelative(t *testing.T) {
+	const recordSize = 52
+
+	buildHeader := func() []byte {
+		h := make([]byte, 0, recordSize)
+		h = append(h, 0xde, 0xad, 0xbe, 0xef) // MagicNumber (unchecked by parseHeader)
+		h = append(h, 0)                      // FileFlags: 0 = little endian
+		h = append(h, 0)                      // RecordFormat
+		h = append(h, 5)                      // FileVersion
+		h = append(h, 0)                      // Compression: 0 = none
+		h = append(h, 0, 0, 0, 1)             // SilkVersion
+		var recSize [2]byte
+		binary.BigEndian.PutUint16(recSize[:], recordSize)
+		h = append(h, recSize[:]...) // RecordSize
+		h = append(h, 0, 5)          // RecordVersion
+
+		// Minimal terminating variable-length header: id=0, length=8, no content.
+		h = append(h, 0, 0, 0, 0) // ID
+		h = append(h, 0, 0, 0, 8) // Length
+
+		// parseHeader pads the header out to a RecordSize boundary.
+		for len(h) < recordSize {
+			h = append(h, 0)
+		}
+		return h
+	}
+
+	// Field byte offsets below match getOffsets()'s recordSize==52 case in file.go.
+	buildRecord := func(srcPort uint16, classType, initalFlags, sessionFlags, attributes uint8) []byte {
+		r := make([]byte, recordSize)
+		binary.LittleEndian.PutUint16(r[12:14], srcPort) // startSrcPort:endSrcPort
+		r[17] = classType                                // startClassType
+		r[21] = initalFlags                              // startInitalFlags
+		r[22] = sessionFlags                             // startSessionFlags
+		r[23] = attributes                               // startAttributes
+		return r
+	}
+
+	var data []byte
+	data = append(data, buildHeader()...)
+	data = append(data, buildRecord(100, 1, 2, 3, 4)...)
+	data = append(data, buildRecord(200, 11, 12, 13, 14)...)
+
+	receiver := NewSliceFlowReceiver(2)
+	if err := Parse(bytes.NewReader(data), receiver); err != nil {
+		t.Fatalf("Parse() error:%s", err)
+	}
+
+	if len(receiver.Flows) != 2 {
+		t.Fatalf("expected 2 flows, got %d", len(receiver.Flows))
+	}
+
+	expected := []Flow{
+		{SrcPort: 100, ClassType: 1, InitalFlags: 2, SessionFlags: 3, Attributes: 4},
+		{SrcPort: 200, ClassType: 11, InitalFlags: 12, SessionFlags: 13, Attributes: 14},
+	}
+
+	for x, exp := range expected {
+		got := receiver.Flows[x]
+		if got.SrcPort != exp.SrcPort {
+			t.Errorf("record %d: SrcPort = %d, want %d", x, got.SrcPort, exp.SrcPort)
+		}
+		if got.ClassType != exp.ClassType {
+			t.Errorf("record %d: ClassType = %d, want %d", x, got.ClassType, exp.ClassType)
+		}
+		if got.InitalFlags != exp.InitalFlags {
+			t.Errorf("record %d: InitalFlags = %d, want %d", x, got.InitalFlags, exp.InitalFlags)
+		}
+		if got.SessionFlags != exp.SessionFlags {
+			t.Errorf("record %d: SessionFlags = %d, want %d", x, got.SessionFlags, exp.SessionFlags)
+		}
+		if got.Attributes != exp.Attributes {
+			t.Errorf("record %d: Attributes = %d, want %d", x, got.Attributes, exp.Attributes)
+		}
+	}
 }
 
 //TestParse Test all supported file formats using an alternative flow receiver
